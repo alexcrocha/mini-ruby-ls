@@ -1,5 +1,7 @@
 #!/usr/bin/env /opt/rubies/3.4.1/bin/ruby
+
 require 'json'
+require 'prism'
 
 $stdin.sync = true
 $stdout.sync = true
@@ -25,19 +27,53 @@ def write_response(response)
   $stdout.print json_response
 end
 
+class Document
+ attr_reader :source
+
+ def initialize(source)
+   @source = source
+   @parse_result = Prism.parse(source)
+ end
+
+ def source=(source)
+    @source = source
+    @parse_result = Prism.parse(source)
+ end
+
+ def ast
+   @parse_result.value
+ end
+end
+
+store = {}
+
 while request = read_request
 
   case request[:method]
   when "initialize"
     write_response(id: request[:id], result: {
-      capabilities: {},
+      capabilities: {
+        textDocumentSync: {
+          openClose: true,
+          change: 1,
+        }
+      },
     })
-    $stderr.puts "Initialize"
   when 'initialized'
-    $stderr.puts "Initialized"
+  when 'textDocument/didOpen'
+    uri = request[:params][:textDocument][:uri]
+    content = Document.new(request[:params][:textDocument][:text])
+    store[uri] = content
+  when 'textDocument/didClose'
+    uri = request[:params][:textDocument][:uri]
+    store.delete(uri)
+  when 'textDocument/didChange'
+    uri = request[:params][:textDocument][:uri]
+    request[:params][:contentChanges].each do |content|
+      store[uri].source = content[:text]
+    end
   when 'shutdown'
     write_response(id: request[:id], result: nil)
-    $stderr.puts "Shutdown"
   when 'exit'
     break
   end

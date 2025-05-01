@@ -8,6 +8,8 @@ let client: LanguageClient;
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	// Define server options, which tells the LanguageClient how to start the server. In this case, we're just using the server.rb executable script
+	// directly
 	const serverPath = vscode.Uri.joinPath(context.extensionUri, "server.rb").fsPath;
 	const executable: Executable = { command: serverPath };
 	const serverOptions: ServerOptions = { run: executable, debug: executable };
