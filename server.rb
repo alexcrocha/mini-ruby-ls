@@ -45,7 +45,24 @@ class Document
  end
 end
 
+class Indexer < Prism::Visitor
+  def initialize(index)
+    @index = index
+  end
+
+  def visit_class_node(node)
+    name = node.constant_path.slice
+    @index[name] = "Found #{name}"
+
+    super
+  end
+end
+
 store = {}
+
+# Currently stores `Name => "Found #{Name}"`. In the Ruby LSP, index is a proper object and the data is saved with
+# specialized entries that hold information about each declaration
+index = {}
 
 while request = read_request
 
@@ -60,6 +77,16 @@ while request = read_request
       },
     })
   when 'initialized'
+    $stderr.puts "Indexing files..."
+
+    Dir.glob('**/*.rb').each do |file|
+      parsed_file = Prism.parse_file(file)
+      ast = parsed_file.value
+      indexer = Indexer.new(index)
+      indexer.visit(ast)
+    end
+
+    $stderr.puts index.inspect
   when 'textDocument/didOpen'
     uri = request[:params][:textDocument][:uri]
     content = Document.new(request[:params][:textDocument][:text])
