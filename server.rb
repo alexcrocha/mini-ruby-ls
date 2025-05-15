@@ -65,43 +65,47 @@ store = {}
 index = {}
 
 while request = read_request
-
   case request[:method]
   when "initialize"
-    write_response(id: request[:id], result: {
-      capabilities: {
-        textDocumentSync: {
-          openClose: true,
-          change: 1,
+    write_response(
+      id: request[:id],
+      result: {
+        capabilities: {
+          textDocumentSync: {
+            openClose: true,
+            change: 1
+          }
         }
-      },
-    })
-  when 'initialized'
+      }
+    )
+  when "initialized"
     $stderr.puts "Indexing files..."
 
-    Dir.glob('**/*.rb').each do |file|
-      parsed_file = Prism.parse_file(file)
-      ast = parsed_file.value
-      indexer = Indexer.new(index)
-      indexer.visit(ast)
-    end
+    Dir
+      .glob("**/*.rb")
+      .each do |file|
+        parsed_file = Prism.parse_file(file)
+        ast = parsed_file.value
+        indexer = Indexer.new(index)
+        indexer.visit(ast)
+      end
 
     $stderr.puts index.inspect
-  when 'textDocument/didOpen'
+  when "textDocument/didOpen"
     uri = request[:params][:textDocument][:uri]
     content = Document.new(request[:params][:textDocument][:text])
     store[uri] = content
-  when 'textDocument/didClose'
+  when "textDocument/didClose"
     uri = request[:params][:textDocument][:uri]
     store.delete(uri)
-  when 'textDocument/didChange'
+  when "textDocument/didChange"
     uri = request[:params][:textDocument][:uri]
     request[:params][:contentChanges].each do |content|
       store[uri].source = content[:text]
     end
-  when 'shutdown'
+  when "shutdown"
     write_response(id: request[:id], result: nil)
-  when 'exit'
+  when "exit"
     break
   end
 end
