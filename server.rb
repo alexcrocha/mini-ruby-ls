@@ -1,7 +1,7 @@
 #!/usr/bin/env /opt/rubies/3.4.1/bin/ruby
 
-require 'json'
-require 'prism'
+require "json"
+require "prism"
 
 $stdin.sync = true
 $stdout.sync = true
@@ -28,21 +28,21 @@ def write_response(response)
 end
 
 class Document
- attr_reader :source
+  attr_reader :source
 
- def initialize(source)
-   @source = source
-   @parse_result = Prism.parse(source)
- end
-
- def source=(source)
+  def initialize(source)
     @source = source
     @parse_result = Prism.parse(source)
- end
+  end
 
- def ast
-   @parse_result.value
- end
+  def source=(source)
+    @source = source
+    @parse_result = Prism.parse(source)
+  end
+
+  def ast
+    @parse_result.value
+  end
 end
 
 class Indexer < Prism::Visitor
@@ -74,7 +74,8 @@ while request = read_request
           textDocumentSync: {
             openClose: true,
             change: 1
-          }
+          },
+          hoverProvider: true
         }
       }
     )
@@ -103,6 +104,19 @@ while request = read_request
     request[:params][:contentChanges].each do |content|
       store[uri].source = content[:text]
     end
+  when "textDocument/hover"
+    uri = request[:params][:textDocument][:uri]
+    position = request[:params][:position]
+    write_response(
+      id: request[:id],
+      result: {
+        contents: {
+          kind: "markdown",
+          value:
+            "Hover over #{uri} at: #{position[:line]}:#{position[:character]}"
+        }
+      }
+    )
   when "shutdown"
     write_response(id: request[:id], result: nil)
   when "exit"
